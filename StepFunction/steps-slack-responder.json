@@ -1,0 +1,92 @@
+{
+  "Comment": "Example of AWS Step Functions and Amazon States Language",
+  "StartAt": "Parallel",
+  "States": {
+    "Parallel": {
+      "Type": "Parallel",
+      "Next": "ChoiceState",
+      "Branches": [
+        {
+          "StartAt": "Wait 10s",
+          "States": {
+            "Wait 10s": {
+              "Type": "Wait",
+              "Seconds": 10,
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Pass",
+          "States": {
+            "Pass": {
+              "Type": "Pass",
+              "Next": "Wait 5s"
+            },
+            "Wait 5s": {
+              "Type": "Wait",
+              "Seconds": 5,
+              "End": true
+            }
+          }
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [ "States.ALL" ],
+          "Next": "InformFailure"
+        }
+      ]
+    },
+    "ChoiceState": {
+      "Type" : "Choice",
+      "InputPath": "$.[0]",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.text",
+            "StringEquals": ""
+          },
+          "Next": "HasId"
+        },
+        {
+          "Variable": "$.text",
+          "StringEquals": "",
+          "Next": "IsRandom"
+        }
+      ],
+      "Default": "DefaultState"
+    },
+    "HasId": {
+      "Type": "Pass",
+      "Next": "Final State"
+    },
+    "IsRandom": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:044280547533:function:xkcd-get-random-id",
+      "ResultPath": "$.text",
+      "Next": "Final State"
+    },
+    "DefaultState": {
+      "Type": "Fail",
+      "Cause": "No Matches!"
+    },
+    "Final State": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:044280547533:function:xkcd-slack-responder",
+      "End": true,
+      "Catch": [
+        {
+          "ErrorEquals": [ "States.ALL" ],
+          "Next": "InformFailure",
+          "ResultPath": null
+        }
+      ]
+    },
+    "InformFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:044280547533:function:xkcd-error-informer",
+      "End": true
+    }
+  }
+}
